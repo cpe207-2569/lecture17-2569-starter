@@ -1,7 +1,9 @@
 # lectuer17-2569-starter — React Hook Form + Zod
 
 ---
+
 ## คู่มือ : https://ui.shadcn.com/docs/forms/react-hook-form
+
 ## ขั้นตอนที่ 12: ติดตั้ง
 
 ### 12.1 ติดตั้ง dependency เดิมของโปรเจกต์
@@ -390,6 +392,34 @@ export function AddNewStudentDialog() {
 />
 ```
 
+```tsx
+<Controller
+  name="firstName"
+  control={form.control}
+  render={({ field, fieldState }) => (
+    <Field data-invalid={fieldState.invalid}>
+      <FieldLabel htmlFor="firstName">ชื่อ</FieldLabel>
+      <Input {...field} id="firstName" aria-invalid={fieldState.invalid} />
+      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+    </Field>
+  )}
+/>
+```
+
+```tsx
+<Controller
+  name="lastName"
+  control={form.control}
+  render={({ field, fieldState }) => (
+    <Field data-invalid={fieldState.invalid}>
+      <FieldLabel htmlFor="lastName">นามสกุล</FieldLabel>
+      <Input {...field} id="lastName" aria-invalid={fieldState.invalid} />
+      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+    </Field>
+  )}
+/>
+```
+
 ### 15.4 Checkbox ความสนใจ (หลายตัว → array)
 
 ```tsx
@@ -416,7 +446,7 @@ export function AddNewStudentDialog() {
                     ? [...field.value, item.id] // ติ๊ก → เพิ่ม id
                     : field.value.filter((id) => id !== item.id), // เอาออก → กรอง id ทิ้ง
                 );
-                field.onBlur(); // Checkbox ไม่มี blur ชัดเจน — ถือว่าแตะแล้ว
+                field.onBlur();
               }}
             />
             <FieldLabel htmlFor={`interest-${item.id}`} className="font-normal">
@@ -555,19 +585,10 @@ function onSubmit(values: StudentFormValues) {
     </p>
   </div>
   <div className="flex flex-wrap gap-2">
-    <Button variant="outline" onClick={handleAddWithoutValidate}>
-      <FlaskConical className="h-4 w-4" />
-      จำลองข้อมูลจากฟอร์ม (ไม่ Validate)
-    </Button>
     <AddNewStudentDialog />
   </div>
 </div>
 ```
-
-จากนั้นลบไฟล์ `src/lib/student-validation.ts` ได้เลย — ไม่มีใครเรียกใช้แล้ว (Zod schema ในขั้นตอนที่ 14 ทำหน้าที่แทน)
-
-> 💡 ปุ่ม "จำลองข้อมูลจากฟอร์ม (ไม่ Validate)" เก็บไว้เทียบ Before/After — กดแล้วได้แถวขยะ (รหัส 5 หลัก, นามสกุลว่าง)
-> เพราะเรียก `addStudent()` ตรงๆ โดยไม่ผ่าน Zod
 
 ### 16.2 เพิ่มคอลัมน์ ความสนใจ / อีเมล / วิชาที่ลงทะเบียน
 
@@ -578,11 +599,15 @@ const interestLabel = (id: string) =>
   interestOptions.find((o) => o.id === id)?.label ?? id;
 ```
 
+ด้านล่าง `<TableHead>หลักสูตร</TableHead>`
+
 ```tsx
 <TableHead>ความสนใจ</TableHead>
 <TableHead>อีเมล</TableHead>
 <TableHead>วิชาที่ลงทะเบียน</TableHead>
 ```
+
+ด้านล่าง ` <TableCell>{s.program}</TableCell>`
 
 ```tsx
 <TableCell>
@@ -616,7 +641,130 @@ const interestLabel = (id: string) =>
 </TableCell>
 ```
 
-### 16.3 ปุ่มบนหน้าแรก
+## 16.3 สรุปขั้นตอน 16.1-16.2
+
+```tsx
+import { FlaskConical } from "lucide-react";
+
+import { ConfirmDeleteButton } from "@/components/confirm-button";
+import { AddNewStudentDialog } from "@/components/students/add-new-student-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useEnrollmentStore } from "@/lib/enrollment-store";
+import { interestOptions } from "@/lib/schema/student-schema";
+
+const interestLabel = (id: string) =>
+  interestOptions.find((o) => o.id === id)?.label ?? id;
+
+/**
+ * จัดการนักศึกษา
+ * ฟอร์มเพิ่มนักศึกษา + ความสนใจ + อีเมล อยู่ในปุ่ม popup (AddNewStudentDialog)
+ * Validate ด้วย React Hook Form + Zod — ดู lib/schemas/student-schema.ts
+ */
+export default function AdminStudentsPage() {
+  const { students, enrollments, addStudent, removeStudent } =
+    useEnrollmentStore();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">จัดการนักศึกษา</h1>
+          <p className="text-sm text-muted-foreground">
+            {students.length} คน — Lecture 17:
+            รับข้อมูลและตรวจสอบก่อนเข้าสู่ระบบ
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <AddNewStudentDialog />
+        </div>
+      </div>
+
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>รหัสนักศึกษา</TableHead>
+              <TableHead>ชื่อ</TableHead>
+              <TableHead>นามสกุล</TableHead>
+              <TableHead>หลักสูตร</TableHead>
+              <TableHead>ความสนใจ</TableHead>
+              <TableHead>อีเมล</TableHead>
+              <TableHead>วิชาที่ลงทะเบียน</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((s, i) => (
+              <TableRow key={`${s.studentId}-${i}`}>
+                <TableCell>{s.studentId}</TableCell>
+                <TableCell>{s.firstName}</TableCell>
+                <TableCell>
+                  {s.lastName || <Badge variant="destructive">ว่างเปล่า</Badge>}
+                </TableCell>
+                <TableCell>{s.program}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {s.interests?.length ? (
+                      s.interests.map((id) => (
+                        <Badge key={id} variant="outline">
+                          {interestLabel(id)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {s.emails?.length ? (
+                    <div className="flex flex-col gap-0.5 text-sm">
+                      {s.emails.map((e) => (
+                        <span key={e.address}>{e.address}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {enrollments
+                      .filter((e) => e.studentId === s.studentId)
+                      .map((e) => (
+                        <Badge key={e.courseId} variant="secondary">
+                          {e.courseId}
+                        </Badge>
+                      ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <ConfirmDeleteButton
+                    label={`ลบ ${s.studentId}`}
+                    title="ลบนักศึกษา?"
+                    description={`ลบ ${s.studentId} ${s.firstName} ${s.lastName} พร้อมการลงทะเบียนทั้งหมด`}
+                    onConfirm={() => removeStudent(s.studentId)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+```
+
+### 16.4 ปุ่มบนหน้าแรก
 
 แก้ `src/pages/home.tsx` ให้มีปุ่มไปหน้าจัดการนักศึกษาด้วย (เดิมมีแค่ปุ่มไปหน้าจัดการการลงทะเบียน):
 
@@ -632,6 +780,10 @@ const interestLabel = (id: string) =>
 ---
 
 ---
+
+## ขั้นตอนที่ 17:
+
+จากนั้นลบไฟล์ `src/lib/student-validation.ts` ได้เลย — ไม่รียกใช้แล้ว (Zod schema ในขั้นตอนที่ 14 ทำหน้าที่แทน)
 
 ## ขั้นตอนที่ 18: สรุปเทียบ — เขียนเอง vs ใช้ React Hook Form + Zod
 
